@@ -1,61 +1,46 @@
-import { useRef, useState } from "react";
+import { Routes, Route, Link } from "react-router-dom";
+import UploadPage from "./pages/uploadpage.jsx";
+import LibraryPage from "./pages/librarypage.jsx";
 
 function App() {
-  const inputRef = useRef(null);
-  const [file, setFile] = useState(null);
-
-  function handleFile(event) {
-    const selectedFile = event.target.files[0];
-
-    if (selectedFile) {
-      setFile(selectedFile);
-      console.log(selectedFile);
-    }
-  }
-
-  async function uploadVideo() {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch(
-    "http://127.0.0.1:8000/upload",
-    {
-      method: "POST",
-      body: formData
-    }
-  );
-
-  const result = await response.json();
-  console.log(result);
-}
-
-
-
   return (
     <div>
-      <h1>Video Upload</h1>
+      <nav style={{ marginBottom: "20px", padding: "10px", borderBottom: "1px solid #ccc" }}>
+        <Link to="/" style={{ marginRight: "15px" }}>
+          <button>Home</button>
+        </Link>
+        <Link to="/upload" style={{ marginRight: "15px" }}>
+          <button>Upload</button>
+        </Link>
+        <Link to="/library">
+          <button>Library</button>
+        </Link>
+      </nav>
 
-      <input
-        type="file"
-        accept="video/*"
-        ref={inputRef}
-        onChange={handleFile}
-        style={{ display: "none" }}
-      />
-
-      <button onClick={() => inputRef.current.click()}>
-        Upload Video
-      </button>
-
-      {file && (
-        <button onClick={uploadVideo}>
-          Send to Backend
-        </button>
-      )}
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/upload" element={<UploadPage />} />
+        <Route path="/library" element={<LibraryPage />} />
+      </Routes>
     </div>
   );
 }
 
-
+function HomePage() {
+  return (
+    <div>
+      <h1>Welcome to WatchCove</h1>
+      <p>Your video streaming platform</p>
+      <div style={{ marginTop: "20px" }}>
+        <Link to="/upload">
+          <button>Go to Upload Page</button>
+        </Link>
+        <Link to="/library" style={{ marginLeft: "10px" }}>
+          <button>Go to Library</button>
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 export default App;

@@ -1,15 +1,26 @@
 import asyncio
 import json
 import subprocess
+from datetime import datetime
 
 from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 
 
 app = FastAPI()
+
+# Enable CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent
@@ -22,6 +33,13 @@ METADATA_DIR = BASE_DIR / "metadata"
 # Create directories if they don't exist
 for directory in [STAGING_DIR, UPLOAD_DIR, METADATA_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
+
+# Metadata file
+METADATA_FILE = METADATA_DIR / "videos.json"
+
+# Initialize metadata file if it doesn't exist
+if not METADATA_FILE.exists():
+    METADATA_FILE.write_text("[]")
 
 
 # Upload configuration
@@ -51,6 +69,20 @@ ALLOWED_EXTENSIONS = {
     ".mov": "mov",
     ".webm": "webm"
 }
+
+
+def load_metadata():
+    """Load video metadata from JSON file"""
+    try:
+        content = METADATA_FILE.read_text()
+        return json.loads(content) if content else []
+    except (json.JSONDecodeError, FileNotFoundError):
+        return []
+
+
+def save_metadata(metadata):
+    """Save video metadata to JSON file"""
+    METADATA_FILE.write_text(json.dumps(metadata, indent=2))
 
 
 def validate_video(file_path: Path, original_filename: str, mime_type: str):
@@ -187,8 +219,22 @@ async def upload_video(file: UploadFile = File(...)):
 
         staging_path.replace(destination)
 
+        # STEP 4: Save metadata to JSON file
+        metadata = load_metadata()
+        video_info = {
+            "video_id": video_id,
+            "original_filename": original_filename,
+            "filename": filename,
+            "extension": extension,
+            "file_size": total_size,
+            "uploaded_at": datetime.now().isoformat()
+        }
+        metadata.append(video_info)
+        save_metadata(metadata)
+
         return {
-            "video_id": video_id
+            "video_id": video_id,
+            "original_filename": original_filename
         }
 
     finally:
@@ -196,3 +242,10 @@ async def upload_video(file: UploadFile = File(...)):
 
         if staging_path.exists():
             staging_path.unlink()
+
+
+@app.get("/videos")
+async def get_videos():
+    """Get all uploaded videos metadata"""
+    metadata = load_metadata()
+    return metadata
